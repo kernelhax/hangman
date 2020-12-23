@@ -2,7 +2,10 @@
 #include <fstream>
 #include <string>
 #include <vector>
-#include <cstdlib>
+#include <chrono>
+#include <thread>
+#include <map>
+
 
 std::string emptyWord(int wordCount);
 
@@ -11,13 +14,14 @@ int main(void)
 	// game variables init
 	std::ifstream wordlist; 
 	int winning = 0;
-	int guess = 0;
-	int losing = 0;
+	size_t guesses = 0;
 	int numberOfWords = 0;
 	bool isPlaying = true;
 	char choice = ' ';
 	std::string line;
 	std::vector<std::string> listOfWords;
+	std::map<char, bool> usedLetters;
+
 	wordlist.open("wordlist.txt");
 	
 	while (std::getline(wordlist, line))
@@ -29,31 +33,60 @@ int main(void)
 	wordlist.close();
 
 	// generate random number for random word 
-	srand(time(NULL));
+	srand((unsigned)time(NULL));
 	int randomWordInt = rand() % numberOfWords;
 	std::string answer = listOfWords.at(randomWordInt);
+	int wordLength = answer.length();
+	std::string blankWord = emptyWord(wordLength);
 
 	// game loop
 	do
 	{
-		int wordLength = answer.length();
-		std::string blankWord = emptyWord(wordLength);
-		std::cout << "Blank word is " << blankWord << std::endl;
-		std::cout << "Answer is " << answer << std::endl;
+		printf("\033c");
+		std::cout << blankWord << std::endl;
+		//*********************************************************
+		// DEBUG
+		//std::cout << "Blank word is " << blankWord << std::endl;
+		//std::cout << "Answer is " << answer << std::endl;
+		// END DEBUG
+		//*********************************************************
 		std::cout << "Guess the word!" << std::endl;
-		std::size_t found = answer.find("o");
-		if (found != std::string::npos)
-		{
-			std::cout << "Guess correctly!" << std::endl;
-		}
 		std::cin >> choice;
 
-		if (choice == 'y' || choice == 'Y')
+		if (usedLetters[choice])
 		{
-			std::cout << "Game Over" << std::endl;
+			std::cout << "Letter used in previous guess." << std::endl;
+			std::this_thread::sleep_for(std::chrono::seconds(1));
+			continue;
 		}
-		if (choice == 'n' || choice == 'N')
+		else
 		{
+			usedLetters[choice] = true;
+		}
+
+		for (size_t i = 0; i < answer.length(); i++)
+		{			
+			if (answer[i] == choice)
+			{
+				blankWord[i] = choice;
+				winning++;
+			}
+		}
+
+		if (winning == answer.length())
+		{
+			std::cout << answer << std::endl;
+			std::cout << "You win!" << std::endl;
+			isPlaying = false;
+			break;
+		}
+
+		guesses++;
+
+		if (guesses > (answer.length() * 2))
+		{
+			std::cout << "Sorry, you lose..." << std::endl;
+			std::cout << "The answer was " << answer << std::endl;
 			isPlaying = false;
 		}
 	} while (isPlaying);
@@ -68,3 +101,6 @@ std::string emptyWord(int wordCount)
 	}
 	return blankWord;
 }
+
+// TODO 
+// Implement Hangman stick figure drawing 
